@@ -13,12 +13,20 @@ if not commit:
 seed = bytes.fromhex(commit)
 random.seed(seed)
 
+# optional canonical ordering (prevents "order bias")
+order = task.get("candidate_order", "as-listed")
+if order == "lexicographic":
+    agents = sorted(agents)
+elif order != "as-listed":
+    raise SystemExit("Unsupported candidate_order: %r" % order)
+
+
 winner = random.choice(agents)
 
 receipt = {
     "task_id": task.get("task_id"),
     "task_commit_sha256": commit,
-    "candidate_order": "as-listed",
+    "candidate_order": order,
     "candidates": agents,
     "winner": winner,
     "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),

@@ -1,13 +1,13 @@
 {
   "task_id": "task_001",
   "task_commit_sha256": "7b4bce91552b4a0f38bf48bdd00c08f96e2df904ae80f038534295b64f7de577",
-  "candidate_order": "as-listed",
+  "candidate_order": "lexicographic",
   "candidates": [
     "agent_alpha",
     "agent_beta",
     "agent_gamma"
   ],
   "winner": "agent_alpha",
-  "timestamp": "2026-02-03T20:28:06.166296Z",
+  "timestamp": "2026-02-03T23:03:14.310487Z",
   "note": "Mock VRF seed=task_commit_sha256. Replace with Re4ctoR VRF proof later."
 }
