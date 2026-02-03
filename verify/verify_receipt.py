@@ -2,13 +2,13 @@ import json
 import sys
 
 if len(sys.argv) != 2:
-    print("Usage: python verify/verify_receipt.py <path_to_receipt.json>")
+    print("Usage: python3 verify/verify_receipt.py <path_to_receipt.json>")
     raise SystemExit(2)
 
 path = sys.argv[1]
 receipt = json.load(open(path, "r", encoding="utf-8"))
 
-required = ["task_id", "candidates", "winner", "timestamp"]
+required = ["task_id", "task_commit_sha256", "candidates", "winner", "timestamp"]
 for k in required:
     if k not in receipt:
         raise Exception(f"Missing field: {k}")
