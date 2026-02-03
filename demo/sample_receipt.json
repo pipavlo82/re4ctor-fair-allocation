@@ -1,0 +1,11 @@
+{
+  "task_id": "task_001",
+  "candidates": [
+    "agent_alpha",
+    "agent_beta",
+    "agent_gamma"
+  ],
+  "winner": "agent_alpha",
+  "timestamp": "2026-02-03T20:22:17.015543Z",
+  "note": "Mock VRF. Replace with Re4ctoR VRF proof later."
+}
