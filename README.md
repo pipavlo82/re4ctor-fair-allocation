@@ -2,7 +2,7 @@
 
 **Verifiable fairness & signed receipts for AI agent marketplaces**
 
-Agent marketplaces cannot prove they are not biasing task allocation.
+Agent marketplaces cannot prove they are not biasing task allocation.  
 Re4ctoR provides a cryptographic root of trust for agent economies.
 
 ---
@@ -42,8 +42,10 @@ No LLM decides fairness. Proofs do.
 ## Demo (local)
 
 ```bash
-python demo/run_lottery.py
-python verify/verify_receipt.py demo/sample_receipt.json
+python3 demo/make_task_commit.py
+python3 demo/run_lottery.py
+cat demo/sample_receipt.json
+python3 verify/verify_receipt.py demo/sample_receipt.json
 
 Use cases
 
