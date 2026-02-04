@@ -5,5 +5,7 @@
   "nonce_hex": "511d1a5a2ffb6ddbe8fcbf3fd72a6f32ab8ffa943c627ae8c9671b9510ae4db6",
   "task_commit_sha256": "7b4bce91552b4a0f38bf48bdd00c08f96e2df904ae80f038534295b64f7de577",
   "commit_timestamp": "2026-02-03T20:28:06.122049Z",
-  "candidate_order": "lexicographic"
+  "candidate_order": "lexicographic",
+  "re4ctor_base_url": "https://re4ctor.com",
+  "re4ctor_vrf_path": "/api/v1/vrf"
 }
