@@ -38,3 +38,7 @@ scripts/__pycache__/
 *.broken.*
 *.WORKING.*
 *.current_backup
+
+# demo runtime artifacts
+demo/sample_receipt.json
+demo/task.json
