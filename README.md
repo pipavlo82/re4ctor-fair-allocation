@@ -1,63 +1,160 @@
-# Re4ctoR Fair Allocation
+# Re4ctoR Fair Allocation API (MVP)
 
-**Verifiable fairness & signed receipts for AI agent marketplaces**
+Verifiable fairness & signed receipts for agent marketplaces.
 
-Agent marketplaces cannot prove they are not biasing task allocation.  
-Re4ctoR provides a cryptographic root of trust for agent economies.
+## What this service does
 
----
+- Deterministic task allocation (`/allocate`)
+- Receipt signing with Ed25519 (`/receipt/sign`)
+- Local cryptographic verification via `verify/verify_receipt.py`
 
-## What problem does this solve?
-
-In agent-based platforms:
-- task assignment = money
-- platforms control allocation
-- agents cannot verify fairness
-- no cryptographic audit trail exists
-
-This creates trust and incentive failures.
+This is infrastructure for trust: allocation decisions are auditable, portable, and cryptographically verifiable.
 
 ---
 
-## What Re4ctoR provides
+## Endpoints
 
-- VRF-based fair task allocation
-- Signed allocation & execution receipts
-- Verifiable, deterministic proofs
-- Audit-ready artifacts
+### `GET /health`
 
-This is **infrastructure**, not an agent.
+Basic liveness probe.
+
+**Response**
+```json
+{"ok": true}
+```
+
+### `POST /allocate`
+
+Returns deterministic winner selection from a task commitment + candidate list.
+
+**Request**
+```json
+{
+  "task_id": "task_001",
+  "task_commit_sha256": "d33a9db4f45f9d2e2fc6b4341242da29b7f13e8bcc1cc928252563c2439ca84f",
+  "candidate_order": "lexicographic",
+  "candidates": ["agent_gamma", "agent_alpha", "agent_beta"]
+}
+```
+
+**Response (example)**
+```json
+{
+  "ok": true,
+  "task_id": "task_001",
+  "task_commit_sha256": "d33a9db4f45f9d2e2fc6b4341242da29b7f13e8bcc1cc928252563c2439ca84f",
+  "candidate_order": "lexicographic",
+  "candidates": ["agent_alpha", "agent_beta", "agent_gamma"],
+  "winner": "agent_gamma",
+  "note": "deterministic mock allocation"
+}
+```
+
+### `POST /receipt/sign`
+
+Signs an unsigned receipt payload and returns:
+- `signer_pubkey_hex`
+- `signature`
+- `signature_scheme`
+
+**Request**
+```json
+{
+  "task_id": "task_001",
+  "task_commit_sha256": "d33a9db4f45f9d2e2fc6b4341242da29b7f13e8bcc1cc928252563c2439ca84f",
+  "candidate_order": "lexicographic",
+  "candidates": ["agent_alpha", "agent_beta", "agent_gamma"],
+  "winner": "agent_gamma",
+  "timestamp": "2026-02-06T02:05:00Z",
+  "note": "deterministic mock allocation"
+}
+```
+
+**Response (example)**
+```json
+{
+  "task_id":"task_001",
+  "task_commit_sha256":"d33a9db4f45f9d2e2fc6b4341242da29b7f13e8bcc1cc928252563c2439ca84f",
+  "candidate_order":"lexicographic",
+  "candidates":["agent_alpha","agent_beta","agent_gamma"],
+  "winner":"agent_gamma",
+  "timestamp":"2026-02-06T02:05:00Z",
+  "note":"deterministic mock allocation",
+  "re4ctor_signature":null,
+  "re4ctor_error":null,
+  "signer_pubkey_hex":"<hex>",
+  "signature":"<hex>",
+  "signature_scheme":"ed25519(sha256(canonical_json))"
+}
+```
 
 ---
 
-## Core idea
-
-**Trust Core** produces cryptographic proofs.  
-**Trust Agent** is only an interface.
-
-No LLM decides fairness. Proofs do.
-
----
-
-## Demo (local)
+## Run locally
 
 ```bash
-python3 demo/make_task_commit.py
-python3 demo/run_lottery.py
-cat demo/sample_receipt.json
-python3 verify/verify_receipt.py demo/sample_receipt.json
+cd /mnt/c/Users/msi/re4ctor-fair-allocation
+source .venv/bin/activate
+uvicorn app.main:app --host 0.0.0.0 --port 8091 --reload
+```
 
-Use cases
+**OpenAPI:**
+- http://127.0.0.1:8091/openapi.json
+- http://127.0.0.1:8091/docs
 
-Agent marketplaces
+---
 
-Autonomous agent networks
+## End-to-end quick test
 
-Fair task distribution
+```bash
+# health
+curl -sS http://127.0.0.1:8091/health
 
-Reputation based on proofs, not claims
+# allocate
+curl -sS -X POST http://127.0.0.1:8091/allocate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "task_id":"task_001",
+    "task_commit_sha256":"d33a9db4f45f9d2e2fc6b4341242da29b7f13e8bcc1cc928252563c2439ca84f",
+    "candidate_order":"lexicographic",
+    "candidates":["agent_gamma","agent_alpha","agent_beta"]
+  }'
 
-Status
+# sign receipt
+cat >/tmp/unsigned_receipt.json <<'JSON'
+{
+  "task_id":"task_001",
+  "task_commit_sha256":"d33a9db4f45f9d2e2fc6b4341242da29b7f13e8bcc1cc928252563c2439ca84f",
+  "candidate_order":"lexicographic",
+  "candidates":["agent_alpha","agent_beta","agent_gamma"],
+  "winner":"agent_gamma",
+  "timestamp":"2026-02-06T02:05:00Z",
+  "note":"deterministic mock allocation"
+}
+JSON
 
-Early MVP / research prototype.
-Focused on correctness, not UX.
+curl -sS -X POST "http://127.0.0.1:8091/receipt/sign" \
+  -H "Content-Type: application/json" \
+  -d @/tmp/unsigned_receipt.json \
+  > /tmp/signed_receipt.json
+
+# verify locally
+cd /mnt/c/Users/msi/re4ctor-fair-allocation
+source .venv/bin/activate
+python3 verify/verify_receipt.py /tmp/signed_receipt.json
+```
+
+**Expected:**
+```
+OK: receipt valid
+signature: ok
+```
+
+---
+
+## Security notes
+
+- Keep API keys and signing keys out of git (`.env`, local key files only).
+- Do not commit runtime artifacts from `demo/`.
+- Rotate signing keys by environment (dev/stage/prod).
+- Treat signed receipts as audit artifacts; persist immutable copies for dispute resolution.
