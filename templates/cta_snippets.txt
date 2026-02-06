@@ -1,0 +1,5 @@
+If useful, I can share a minimal receipt + verifier flow you can run locally in ~2 minutes.
+
+If you want, I can post a compact API example for fair allocation + signed receipts (/allocate + /receipt/sign).
+
+Happy to share a reproducible demo: deterministic allocation, signed receipt, and independent verification.

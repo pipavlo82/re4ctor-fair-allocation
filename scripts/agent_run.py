@@ -2,11 +2,35 @@
 # -*- coding: utf-8 -*-
 
 import json
+
+
+def _safe_int(v, default=0):
+    try:
+        if callable(v):
+            return default
+        return int(v)
+    except Exception:
+        return default
+
 import os
 import time
 import random
 from pathlib import Path
 from datetime import datetime, timezone
+
+
+def decision_log(comment_id: str, action: str, reason: str, score: int = 0, dry_run: bool = True):
+    try:
+        print(json.dumps({
+            "event": "decision",
+            "comment_id": comment_id,
+            "action": action,
+            "reason": reason,
+            "relevance_score": _safe_int(score or 0),
+            "dry_run": bool(dry_run),
+        }, ensure_ascii=False))
+    except Exception as e:
+        print(f"decision_log_error: {e}")
 
 # ========= Config =========
 REQUEST_TIMEOUT = int(os.getenv("REQUEST_TIMEOUT", "20"))
@@ -26,6 +50,17 @@ MOLTBOOK_API_KEY = os.getenv("MOLTBOOK_API_KEY", "").strip()
 # data/inbox.json = [{"id":"c1","content":"...","author":"...","created_at":"..."}]
 INBOX_FILE = os.getenv("INBOX_FILE", "data/inbox.json")
 
+
+
+def safe_int_score(v, default=0):
+    try:
+        if callable(v):
+            v = v()
+        if v is None:
+            return default
+        return int(v)
+    except Exception:
+        return default
 
 def utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -147,6 +182,7 @@ def process_local_inbox() -> int:
         text = normalize_text(str(item.get("content", "")))
 
         if not cid or not text:
+            decision_log(cid, "skip", "why_skip", 0, dry_run=dry_run)
             continue
         if not should_reply(cid, state):
             continue
@@ -161,9 +197,11 @@ def process_local_inbox() -> int:
 
         if DRY_RUN:
             print(f"[DRY_RUN] would reply to {cid}: {reply}")
+            decision_log(cid, "post", "why_post", score, dry_run=True)
         else:
             # Placeholder for real API call (kept intentionally safe)
             print(f"[LIVE] reply to {cid}: {reply}")
+            decision_log(cid, "post", "why_post", score, dry_run=False)
 
         mark_replied(cid, state)
         mark_author_reply(author, state)

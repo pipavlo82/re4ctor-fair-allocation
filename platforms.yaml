@@ -1,0 +1,39 @@
+platforms:
+  - name: moltbook
+    enabled: true
+    kind: community
+    base_url: "https://www.moltbook.com"
+    api_available: true
+    signup_url: "https://www.moltbook.com/signup"
+    tos_risk: "low"
+    requires_human_checkpoint: true
+    max_actions_per_day: 10
+    max_replies_per_hour: 2
+    cooldown_sec_min: 45
+    cooldown_sec_max: 150
+
+  - name: x_twitter
+    enabled: false
+    kind: social
+    base_url: "https://x.com"
+    api_available: true
+    signup_url: "https://x.com/i/flow/signup"
+    tos_risk: "medium"
+    requires_human_checkpoint: true
+    max_actions_per_day: 6
+    max_replies_per_hour: 1
+    cooldown_sec_min: 90
+    cooldown_sec_max: 240
+
+  - name: reddit
+    enabled: false
+    kind: forum
+    base_url: "https://www.reddit.com"
+    api_available: true
+    signup_url: "https://www.reddit.com/register/"
+    tos_risk: "medium"
+    requires_human_checkpoint: true
+    max_actions_per_day: 6
+    max_replies_per_hour: 1
+    cooldown_sec_min: 90
+    cooldown_sec_max: 240
