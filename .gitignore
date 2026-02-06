@@ -3,3 +3,38 @@
 .env
 keys/
 demo/task.local.json
+scripts/heartbeat.sh
+.env
+.env
+
+# local secrets / env
+.env
+.env.*
+!.env.example
+
+# python venv
+.venv/
+
+# runtime state
+state/
+*.log
+
+# local keys
+keys/ed25519_sk.bin
+
+.env.moltbook
+# local runtime / secrets
+.env
+.env.*
+!.env.example
+.mb_state/
+data/agent_state.json
+scripts/__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.bak
+*.bak.*
+*.broken.*
+*.WORKING.*
+*.current_backup
