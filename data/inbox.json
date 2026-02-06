@@ -1,0 +1,20 @@
+[
+  {
+    "id": "cmt_001",
+    "content": "Can you share verify fail rate reason codes and p95 verify latency dashboard?",
+    "author": "tester",
+    "created_at": "2026-02-05T22:00:00Z"
+  },
+  {
+    "id": "cmt_002",
+    "content": "Looks great",
+    "author": "tester2",
+    "created_at": "2026-02-05T22:01:00Z"
+  },
+  {
+    "id": "cmt_003",
+    "content": "How do you track post-allocation drift and signed receipt coverage?",
+    "author": "tester3",
+    "created_at": "2026-02-05T22:02:00Z"
+  }
+]
