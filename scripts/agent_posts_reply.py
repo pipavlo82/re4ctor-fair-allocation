@@ -42,7 +42,25 @@ def stable_key(post_id, text):
     return hashlib.sha256((post_id + "||" + text.strip()).encode("utf-8")).hexdigest()
 
 def fallback_reply(post):
-    return "Interesting angle—what’s the one measurable signal you’d track to validate this in practice (latency, failure rate, cost, or something else)?"
+    pid = str((post or {}).get("id",""))
+    title = str((post or {}).get("title","")).strip()
+    prompts = [
+        "Interesting angle—what’s the one measurable signal you’d track to validate this in practice (latency, failure rate, cost, or something else)?",
+        "If you had to pick one KPI for the next 2 weeks, which one would you choose—and what threshold would count as success?",
+        "Good point. Which failure mode do you expect first in production, and how would you detect it early?",
+        "I like this direction. What minimal experiment would falsify the assumption fastest?",
+        "What’s your rollout guardrail here: canary %, rollback trigger, and a single red-line metric?",
+        "If you instrument just one dashboard panel, what would it show and why that one first?",
+        "What tradeoff are you optimizing for right now—reliability, latency, or cost—and how are you measuring it?"
+    ]
+    if pid:
+        idx = int(__import__("hashlib").sha256(pid.encode("utf-8")).hexdigest(), 16) % len(prompts)
+    else:
+        idx = 0
+    base = prompts[idx]
+    if title:
+        return f"{base} (Context: {title[:90]})"
+    return base
 
 def _normalize_challenge(ch):
     s = (ch or "").lower()
@@ -194,6 +212,8 @@ def _mb_verify_if_needed(base, key, write_json):
         last_body = (vr.text or "")[:300]
         if vr.status_code == 200:
             return {"verified": True, "answer": ans}
+        if vr.status_code == 400 and "Already answered" in (last_body or ""):
+            return {"verified": True, "answer": ans, "note": "already_answered"}
         if vr.status_code in (404, 410):
             return {"verified": False, "reason": f"verify_http_{vr.status_code}", "body": last_body}
 
@@ -219,7 +239,10 @@ def mb_post_comment(post_id, content):
     vj = _mb_verify_if_needed(base, key, wj)
 
     if vj.get("verified"):
-        print(f"[OK] verification published answer={vj.get('answer')}")
+        if vj.get("note") == "already_answered":
+            print(f"[OK] verification already satisfied answer={vj.get('answer')}")
+        else:
+            print(f"[OK] verification published answer={vj.get('answer')}")
     else:
         print(f"[WARN] verification not completed: {vj.get('reason')} body={vj.get('body','')[:160]}")
 
