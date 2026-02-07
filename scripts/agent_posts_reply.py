@@ -5,6 +5,18 @@ import re
 import requests
 from pathlib import Path
 
+
+
+def _is_post_not_found_err(msg: str) -> bool:
+    t = str(msg or "").lower()
+    return (
+        "post not found" in t
+        or "post failed 404" in t
+        or '"error":"post not found"' in t
+        or " 404" in t
+    )
+
+
 STATE_DIR = Path("state")
 STATE_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -13,6 +25,17 @@ def _env_int(name, default):
         return int(os.getenv(name, str(default)))
     except Exception:
         return default
+
+def _env_bool(keys, default=False):
+    if isinstance(keys, str):
+        keys = [keys]
+    for k in keys:
+        v = os.getenv(k)
+        if v is None or str(v).strip() == "":
+            continue
+        return str(v).strip().lower() in ("1","true","yes","on")
+    return bool(default)
+
 
 def load_jsonl(path):
     p = Path(path)
@@ -222,11 +245,37 @@ def _mb_verify_if_needed(base, key, write_json):
 
     return {"verified": False, "reason": f"verify_http_{last_status}", "body": last_body}
 
-def mb_post_comment(post_id, content):
-    base = os.getenv("MB_BASE", "https://www.moltbook.com").rstrip("/")
-    key = os.getenv("MOLTBOOK_API_KEY", "")
-    if not key:
-        raise RuntimeError("MOLTBOOK_API_KEY is empty")
+def mb_post_comment(*args, **kwargs):
+    try:
+        out = _mb_post_comment_impl(*args, **kwargs)
+    except Exception as e:
+        msg = str(e)
+        if _is_post_not_found_err(msg):
+            return {"ok": False, "post_not_found": True, "msg": msg}
+        return {"ok": False, "msg": msg}
+
+    # normalize non-dict
+    if not isinstance(out, dict):
+        msg = str(out)
+        if _is_post_not_found_err(msg):
+            return {"ok": False, "post_not_found": True, "msg": msg}
+        return {"ok": False, "msg": msg}
+
+    # direct post_not_found signal
+    if out.get("post_not_found") is True:
+        out["ok"] = False
+        return out
+
+    # derive from message text
+    msg = str(out.get("msg") or out.get("error") or out)
+    if _is_post_not_found_err(msg):
+        out["ok"] = False
+        out["post_not_found"] = True
+        out["msg"] = msg
+        return out
+
+    return out
+
 
     url = f"{base}/api/v1/posts/{post_id}/comments"
     r = requests.post(
@@ -272,7 +321,7 @@ def main():
     skip_count = 0
     post_count = 0
     err_count = 0
-    skip_reasons = {"replied": 0, "low_signal": 0, "dedup": 0, "testlike_blocked": 0}
+    skip_reasons = {"post_not_found": 0, "replied": 0, "low_signal": 0, "dedup": 0, "testlike_blocked": 0}
 
     backlog_path = os.getenv("BACKLOG_FILE", "state/posts_backlog.jsonl")
     if not Path(backlog_path).exists():
@@ -286,8 +335,10 @@ def main():
     max_replies = _env_int("MAX_REPLIES", 3)
     min_score = float(os.getenv("MIN_SCORE", "3.6"))
     min_comments = _env_int("MIN_COMMENTS", 3)
+    # canonical replied-skip flag (priority: SKIP_REPLIED, fallback: IGNORE_REPLIED)
+    skip_replied = _env_bool(["SKIP_REPLIED"], default=False) if os.getenv("SKIP_REPLIED") is not None else _env_bool(["IGNORE_REPLIED"], default=True)
+    ignore_replied = skip_replied  # backward compatibility
     sleep_s = float(os.getenv("SLEEP_S", "1.2"))
-    ignore_replied = os.getenv("IGNORE_REPLIED", "0") == "1"
     dedup_disable = os.getenv("DEDUP_DISABLE", "0") == "1"
 
     replied_posts = load_state(STATE_DIR / "replied_posts.json", {"posts": []})
@@ -319,7 +370,7 @@ def main():
         pid = post.get("id", "")
         comments = int(post.get("comment_count") or 0)
 
-        if (pid in replied_set) and (not ignore_replied):
+        if skip_replied and pid in replied_set:
             skip_count += 1
             skip_reasons["replied"] += 1
             continue
@@ -381,3 +432,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
