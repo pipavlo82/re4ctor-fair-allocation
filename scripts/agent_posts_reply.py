@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-import os, json, time, hashlib, re, requests
+import os, json, time, hashlib
+from datetime import datetime, timezone
+import re
+import requests
 from pathlib import Path
 
 STATE_DIR = Path("state")
@@ -248,11 +251,28 @@ def mb_post_comment(post_id, content):
 
     return wj
 
+
+def _is_testlike_comment(text: str) -> bool:
+    t = (text or "").strip().lower()
+    if not t:
+        return True
+    prefixes = ("[diag]", "[hb test]", "[test]", "[smoke]", "transport check:")
+    return t.startswith(prefixes)
+
+def _write_run_report(path: str, payload: dict):
+    if not path:
+        return
+    pp = Path(path)
+    pp.parent.mkdir(parents=True, exist_ok=True)
+    payload = dict(payload or {})
+    payload["ts_utc"] = datetime.now(timezone.utc).isoformat()
+    pp.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
 def main():
     skip_count = 0
     post_count = 0
     err_count = 0
-    skip_reasons = {"replied": 0, "low_signal": 0, "dedup": 0}
+    skip_reasons = {"replied": 0, "low_signal": 0, "dedup": 0, "testlike_blocked": 0}
 
     backlog_path = os.getenv("BACKLOG_FILE", "state/posts_backlog.jsonl")
     if not Path(backlog_path).exists():
@@ -260,6 +280,8 @@ def main():
         raise SystemExit(2)
 
     dry_run = os.getenv("DRY_RUN", "0") == "1"
+    block_testlike = os.getenv("BLOCK_TESTLIKE_COMMENTS", "1") == "1"
+    report_file = os.getenv("REPORT_FILE", "state/last_reply_run.json")
     top_n = _env_int("TOP_N", 10)
     max_replies = _env_int("MAX_REPLIES", 3)
     min_score = float(os.getenv("MIN_SCORE", "3.6"))
@@ -347,6 +369,15 @@ def main():
     print(f"\n[OK] processed picked={len(picked)} made={made} dry_run={dry_run}")
     print({"skips": skip_count, "posts": post_count, "errors": err_count})
     print({"skip_reasons": skip_reasons})
+    _write_run_report(report_file, {
+        "picked": len(picked),
+        "made": made,
+        "dry_run": dry_run,
+        "skips": skip_count,
+        "posts": post_count,
+        "errors": err_count,
+        "skip_reasons": skip_reasons,
+    })
 
 if __name__ == "__main__":
     main()
